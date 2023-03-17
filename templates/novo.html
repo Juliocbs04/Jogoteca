@@ -2,7 +2,7 @@
 {% block conteudo %}
       <form method="post" action="/criar" enctype="multipart/form-data">
         <fieldset>
-
+          {{ form.csrf_token() }}
           <figure class="img-thumbnail col-md-4">
             <img class="img-fluid" src="{{ url_for('imagem', nome_arquivo='padrao.jpg')  }}">
             <figcaption>
@@ -14,18 +14,21 @@
           </figure>
 
           <div class="form-group">
-            <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" class="form-control">
+            {{ form.nome.label(class="form-label")  }}
+            {{ form.nome(class="form-control")  }}
           </div>
           <div class="form-group">
-            <label for="categoria">Categoria</label>
-            <input type="text" id="categoria" name="categoria" class="form-control">
+            {{ form.categoria.label(class="form-label")  }}
+            {{ form.categoria(class="form-control")  }}
           </div>
           <div class="form-group">
-            <label for="console">Console</label>
-            <input type="text" id="console" name="console" class="form-control">
+            {{ form.console.label(class="form-label")  }}
+            {{ form.console(class="form-control")  }}
           </div>
-          <button type="submit" class="btn btn-primary btn-salvar">Salvar</button>
+          <div>
+            {{ form.salvar(class="mt-1 btn btn-primary margin-top") }}
+          </div>
+          <a href="{{ url_for('index') }}" class="mt-1 btn btn-warning">Voltar</a>
         </fieldset>
       </form>
 

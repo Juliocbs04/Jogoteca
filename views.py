@@ -1,10 +1,12 @@
 import time
 
 from flask import render_template, request, redirect, session, flash, url_for, send_from_directory
+
+from forms.UsuarioForms import FormularioUsuario
 from jogoteca import app, db
 from models.jogo import Jogo
 from models.usuario import Usuario
-from helpers import recupera_imagem, deleta_arquivo
+from helpers import recupera_imagem, deleta_arquivo, FormularioJogo
 
 
 @app.route('/')
@@ -18,7 +20,8 @@ def index():
 def cadastro():
     if 'usuario_logado' not in session or session['usuario_logado'] is None:
         return redirect('/login')
-    return render_template('novo.html', titulo='Novo Jogo')
+    form = FormularioJogo()
+    return render_template('novo.html', titulo='Novo Jogo', form=form)
 
 
 @app.route('/editar/<int:id>')
@@ -26,15 +29,25 @@ def editar(id):
     if 'usuario_logado' not in session or session['usuario_logado'] is None:
         return redirect('/login')
     jogo = Jogo.query.filter_by(id=id).first()
+    form = FormularioJogo()
+    form.nome.data = jogo.nome
+    form.categoria.data = jogo.categoria
+    form.console.data = jogo.console
+
     capa_jogo = recupera_imagem(id)
-    return render_template('editar.html', titulo='Editando Jogo', jogo=jogo, capa_jogo= capa_jogo)
+    return render_template('editar.html', titulo='Editando Jogo', id=id, capa_jogo=capa_jogo, form=form)
 
 
 @app.route('/criar', methods=['POST', ])
 def criar():
-    nome = request.form['nome']
-    categoria = request.form['categoria']
-    console = request.form['console']
+    form = FormularioJogo(request.form)
+
+    if not form.validate_on_submit():
+        return redirect(url_for('novo'))
+
+    nome = form.nome.data
+    categoria = form.categoria.data
+    console = form.console.data
     jogo = Jogo.query.filter_by(nome=nome).first()
 
     if jogo:
@@ -56,20 +69,23 @@ def criar():
 
 @app.route('/atualizar', methods=['POST', ])
 def atualizar():
-    atualiza_jogo = Jogo.query.filter_by(id=request.form['id']).first()
-    atualiza_jogo.nome = request.form['nome']
-    atualiza_jogo.categoria = request.form['categoria']
-    atualiza_jogo.console = request.form['console']
-    # estava dando erro usando add com merge funcionou
-    db.session.merge(atualiza_jogo)
-    db.session.commit()
+    form = FormularioJogo(request.form)
 
-    arquivo = request.files['arquivo']
-    if arquivo:
-        upload_path = app.config['UPLOAD_PATH']
-        timestamp = time.time()
-        deleta_arquivo(atualiza_jogo.id)
-        arquivo.save(f'{upload_path}/capa{atualiza_jogo.id}-{timestamp}.jpg')
+    if form.validate_on_submit():
+        novo_jogo = Jogo.query.filter_by(id=request.form['id']).first()
+        novo_jogo.nome = form.nome.data
+        novo_jogo.categoria = form.categoria.data
+        novo_jogo.console = form.console.data
+        # estava dando erro usando add com merge funcionou
+        db.session.add(novo_jogo)
+        db.session.commit()
+
+        arquivo = request.files['arquivo']
+        if arquivo:
+            upload_path = app.config['UPLOAD_PATH']
+            timestamp = time.time()
+            deleta_arquivo(novo_jogo.id)
+            arquivo.save(f'{upload_path}/capa{novo_jogo.id}-{timestamp}.jpg')
 
     return redirect(url_for('index'))
 
@@ -88,15 +104,17 @@ def deletar(id):
 
 @app.route('/login')
 def login():
-    return render_template('login.html', titulo='Login')
+    form = FormularioUsuario()
+    return render_template('login.html', titulo='Login', form=form)
 
 
 @app.route('/autenticar', methods=['POST', ])
 def autenticar():
-    usuario = Usuario.query.filter_by(nickname=request.form['usuario']).first()
+    form = FormularioUsuario(request.form)
+    usuario = Usuario.query.filter_by(nickname=form.nickname.data).first()
 
     if usuario:
-        if request.form['senha'] == usuario.senha:
+        if form.senha.data == usuario.senha:
             session['usuario_logado'] = usuario.nickname
             flash('Usuario {} foi logado com sucesso!'.format(session['usuario_logado']))
             return redirect(url_for('index'))
@@ -115,6 +133,3 @@ def logout():
 @app.route('/uploads/<nome_arquivo>')
 def imagem(nome_arquivo):
     return send_from_directory('uploads', nome_arquivo)
-
-
-

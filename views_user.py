@@ -15,13 +15,17 @@ def login():
 def autenticar():
     form = FormularioUsuario(request.form)
     usuario = Usuario.query.filter_by(nickname=form.nickname.data).first()
-    senha = check_password_hash(usuario.senha, form.senha.data)
-    if usuario and senha:
-        session['usuario_logado'] = usuario.nickname
-        flash('Usuario {} foi logado com sucesso!'.format(session['usuario_logado']))
-        return redirect(url_for('index'))
+    if usuario:
+        senha = check_password_hash(usuario.senha, form.senha.data)
+        if senha:
+            session['usuario_logado'] = usuario.nickname
+            flash('Usuario {} foi logado com sucesso!'.format(session['usuario_logado']))
+            return redirect(url_for('index'))
+        else:
+            flash('Erro na autenticação usuário ou senha incorretos')
+            return redirect(url_for('login'))
     else:
-        flash('Erro na autenticação usuário ou senha incorretos', session['usuario_logado'])
+        flash('Erro na autenticação usuário ou senha incorretos')
         return redirect(url_for('login'))
 
 
